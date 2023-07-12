@@ -5,22 +5,21 @@
       <Toolbar class="mb-4">
         <template #start>
           <Button label="New" icon="pi pi-plus" severity="success" class="mr-2" @click="openNew" />
-          <Button label="Delete" icon="pi pi-trash" severity="danger" @click="confirmDeleteSelected" :disabled="!selectedProducts || !selectedProducts.length" />
+          <Button label="Delete" icon="pi pi-trash" severity="danger" @click="confirmDeleteSelected" :disabled="!selectedPlayer || !selectedPlayer.length" />
         </template>
 
         <template #end>
-          <FileUpload mode="basic" accept="image/*" :maxFileSize="1000000" label="Import" chooseLabel="Import" class="mr-2 inline-block" />
           <Button label="Export" icon="pi pi-upload" severity="help" @click="exportCSV($event)"  />
         </template>
       </Toolbar>
 
-      <DataTable ref="dt" :value="products" v-model:selection="selectedProducts" dataKey="id"
+      <DataTable ref="dt" :value="player" v-model:selection="selectedPlayer" dataKey="id"
                  :paginator="true" :rows="10" :filters="filters"
                  paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown" :rowsPerPageOptions="[5,10,25]"
                  currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products">
         <template #header>
           <div class="flex flex-wrap gap-2 align-items-center justify-content-between">
-            <h4 class="m-0">Manage Products</h4>
+            <h4 class="m-0">Manage Player</h4>
             <span class="p-input-icon-left">
                             <i class="pi pi-search" />
                             <InputText v-model="filters['global'].value" placeholder="Search..." />
@@ -31,27 +30,8 @@
         <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
         <Column field="code" header="Code" sortable style="min-width:12rem"></Column>
         <Column field="name" header="Name" sortable style="min-width:16rem"></Column>
-        <Column header="Image">
-          <template #body="slotProps">
-            <img :src="`https://primefaces.org/cdn/primevue/images/product/${slotProps.data.image}`" :alt="slotProps.data.image" class="shadow-2 border-round" style="width: 64px" />
-          </template>
-        </Column>
-        <Column field="price" header="Price" sortable style="min-width:8rem">
-          <template #body="slotProps">
-            {{formatCurrency(slotProps.data.price)}}
-          </template>
-        </Column>
+
         <Column field="category" header="Category" sortable style="min-width:10rem"></Column>
-        <Column field="rating" header="Reviews" sortable style="min-width:12rem">
-          <template #body="slotProps">
-            <Rating :modelValue="slotProps.data.rating" :readonly="true" :cancel="false" />
-          </template>
-        </Column>
-        <Column field="inventoryStatus" header="Status" sortable style="min-width:12rem">
-          <template #body="slotProps">
-            <Tag :value="slotProps.data.inventoryStatus" :severity="getStatusLabel(slotProps.data.inventoryStatus)" />
-          </template>
-        </Column>
         <Column :exportable="false" style="min-width:8rem">
           <template #body="slotProps">
             <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editProduct(slotProps.data)" />
@@ -157,6 +137,7 @@ import { ref, onMounted } from 'vue';
 import { FilterMatchMode } from 'primevue/api';
 import { useToast } from 'primevue/usetoast';
 import {ProductService} from "@/service/ProuctService";
+import player from "@/components/player/Player.vue";
 
 onMounted(() => {
   ProductService.getProducts().then((data) => (products.value = data));
@@ -169,7 +150,7 @@ const productDialog = ref(false);
 const deleteProductDialog = ref(false);
 const deleteProductsDialog = ref(false);
 const product = ref({});
-const selectedProducts = ref();
+const selectedPlayer = ref();
 const filters = ref({
   'global': {value: null, matchMode: FilterMatchMode.CONTAINS},
 });
@@ -256,9 +237,9 @@ const confirmDeleteSelected = () => {
   deleteProductsDialog.value = true;
 };
 const deleteSelectedProducts = () => {
-  products.value = products.value.filter(val => !selectedProducts.value.includes(val));
+  products.value = products.value.filter(val => !selectedPlayer.value.includes(val));
   deleteProductsDialog.value = false;
-  selectedProducts.value = null;
+  selectedPlayer.value = null;
   toast.add({severity:'success', summary: 'Successful', detail: 'Products Deleted', life: 3000});
 };
 
