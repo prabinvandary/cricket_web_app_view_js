@@ -1,262 +1,185 @@
-
 <template>
   <div>
     <div class="card">
       <Toolbar class="mb-4">
         <template #start>
-          <Button label="New" icon="pi pi-plus" severity="success" class="mr-2" @click="openNew" />
-          <Button label="Delete" icon="pi pi-trash" severity="danger" @click="confirmDeleteSelected" :disabled="!selectedPlayer || !selectedPlayer.length" />
+          <Button label="New" icon="pi pi-plus" severity="success" class="mr-2" @click="openNew"/>
+          <Button label="Delete" icon="pi pi-trash" severity="danger" @click="confirmDeleteSelected"
+                  :disabled="!selectedPlayers || !selectedPlayers.length"/>
         </template>
 
         <template #end>
-          <Button label="Export" icon="pi pi-upload" severity="help" @click="exportCSV($event)"  />
+          <FileUpload mode="basic" accept="image/*" :maxFileSize="1000000" label="Import" chooseLabel="Import"
+                      class="mr-2 inline-block"/>
+          <Button label="Export" icon="pi pi-upload" severity="help" @click="exportCSV($event)"/>
         </template>
       </Toolbar>
 
-      <DataTable ref="dt" :value="player" v-model:selection="selectedPlayer" dataKey="id"
+      <DataTable ref="dt" :value="players" v-model:selection="selectedPlayers" dataKey="id"
                  :paginator="true" :rows="10" :filters="filters"
-                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown" :rowsPerPageOptions="[5,10,25]"
-                 currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products">
+                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                 :rowsPerPageOptions="[5,10,25]"
+                 currentPageReportTemplate="Showing {first} to {last} of {totalRecords} players">
         <template #header>
           <div class="flex flex-wrap gap-2 align-items-center justify-content-between">
-            <h4 class="m-0">Manage Player</h4>
+            <h4 class="m-0">Manage Products</h4>
             <span class="p-input-icon-left">
-                            <i class="pi pi-search" />
-                            <InputText v-model="filters['global'].value" placeholder="Search..." />
+                            <i class="pi pi-search"/>
+                            <InputText v-model="filters['global'].value" placeholder="Search..."/>
                         </span>
           </div>
         </template>
 
         <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
-        <Column field="code" header="Code" sortable style="min-width:12rem"></Column>
+        <Column field="id" header="id" sortable style="min-width:12rem"></Column>
         <Column field="name" header="Name" sortable style="min-width:16rem"></Column>
-
-        <Column field="category" header="Category" sortable style="min-width:10rem"></Column>
+        <Column field="address" header="Address" sortable style="min-width:10rem"></Column>
+        <Column field="playerRole" header="Player Role" sortable style="min-width:10rem"></Column>
         <Column :exportable="false" style="min-width:8rem">
           <template #body="slotProps">
-            <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editProduct(slotProps.data)" />
-            <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteProduct(slotProps.data)" />
+            <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editPlayer(slotProps.data)"/>
+            <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeletePlayer(slotProps.data)"/>
           </template>
         </Column>
       </DataTable>
     </div>
 
-    <Dialog v-model:visible="productDialog" :style="{width: '450px'}" header="Product Details" :modal="true" class="p-fluid">
-      <img v-if="product.image" :src="`https://primefaces.org/cdn/primevue/images/product/${product.image}`" :alt="product.image" class="block m-auto pb-3" />
+    <Dialog v-model:visible="playerDialog" :style="{width: '450px'}" header="Player Details" :modal="true"
+            class="p-fluid">
       <div class="field">
         <label for="name">Name</label>
-        <InputText id="name" v-model.trim="product.name" required="true" autofocus :class="{'p-invalid': submitted && !product.name}" />
-        <small class="p-error" v-if="submitted && !product.name">Name is required.</small>
+        <InputText id="name" v-model.trim="player.name" required="true" autofocus
+                   :class="{'p-invalid': submitted && !player.name}"/>
+        <small class="p-error" v-if="submitted && !player.name">Name is required.</small>
       </div>
       <div class="field">
-        <label for="description">Description</label>
-        <Textarea id="description" v-model="product.description" required="true" rows="3" cols="20" />
+        <label for="address">Address</label>
+        <InputText id="address" v-model.trim="player.address" required="true" autofocus
+                   :class="{'p-invalid': submitted && !player.address}"/>
+        <small class="p-error" v-if="submitted && !player.address">Address is required.</small>
       </div>
-
       <div class="field">
-        <label for="inventoryStatus" class="mb-3">Inventory Status</label>
-        <Dropdown id="inventoryStatus" v-model="product.inventoryStatus" :options="statuses" optionLabel="label" placeholder="Select a Status">
-          <template #value="slotProps">
-            <div v-if="slotProps.value && slotProps.value.value">
-              <Tag :value="slotProps.value.value" :severity="getStatusLabel(slotProps.value.label)" />
-            </div>
-            <div v-else-if="slotProps.value && !slotProps.value.value">
-              <Tag :value="slotProps.value" :severity="getStatusLabel(slotProps.value)" />
-            </div>
-            <span v-else>
-							{{slotProps.placeholder}}
-						</span>
-          </template>
-        </Dropdown>
-      </div>
-
-      <div class="field">
-        <label class="mb-3">Category</label>
-        <div class="formgrid grid">
-          <div class="field-radiobutton col-6">
-            <RadioButton id="category1" name="category" value="Accessories" v-model="product.category" />
-            <label for="category1">Accessories</label>
-          </div>
-          <div class="field-radiobutton col-6">
-            <RadioButton id="category2" name="category" value="Clothing" v-model="product.category" />
-            <label for="category2">Clothing</label>
-          </div>
-          <div class="field-radiobutton col-6">
-            <RadioButton id="category3" name="category" value="Electronics" v-model="product.category" />
-            <label for="category3">Electronics</label>
-          </div>
-          <div class="field-radiobutton col-6">
-            <RadioButton id="category4" name="category" value="Fitness" v-model="product.category" />
-            <label for="category4">Fitness</label>
-          </div>
-        </div>
-      </div>
-
-      <div class="formgrid grid">
-        <div class="field col">
-          <label for="price">Price</label>
-          <InputNumber id="price" v-model="product.price" mode="currency" currency="USD" locale="en-US" />
-        </div>
-        <div class="field col">
-          <label for="quantity">Quantity</label>
-          <InputNumber id="quantity" v-model="product.quantity" integeronly />
-        </div>
+        <label for="playerRole">PlayerRole</label>
+        <InputText id="playerRole" v-model.trim="player.playerRole" required="true" autofocus
+                   :class="{'p-invalid': submitted && !player.playerRole}"/>
+        <small class="p-error" v-if="submitted && !player.playerRole">Player role is required.</small>
       </div>
       <template #footer>
         <Button label="Cancel" icon="pi pi-times" text @click="hideDialog"/>
-        <Button label="Save" icon="pi pi-check" text @click="saveProduct" />
+        <Button label="Save" icon="pi pi-check" text @click="savePlayer"/>
       </template>
     </Dialog>
 
-    <Dialog v-model:visible="deleteProductDialog" :style="{width: '450px'}" header="Confirm" :modal="true">
+    <Dialog v-model:visible="deletePlayerDialog" :style="{width: '450px'}" header="Confirm" :modal="true">
       <div class="confirmation-content">
-        <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem" />
-        <span v-if="product">Are you sure you want to delete <b>{{product.name}}</b>?</span>
+        <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem"/>
+        <span v-if="player">Are you sure you want to delete <b>{{ player.name }}</b>?</span>
       </div>
       <template #footer>
-        <Button label="No" icon="pi pi-times" text @click="deleteProductDialog = false"/>
-        <Button label="Yes" icon="pi pi-check" text @click="deleteProduct" />
+        <Button label="No" icon="pi pi-times" text @click="deletePlayerDialog = false"/>
+        <Button label="Yes" icon="pi pi-check" text @click="deletePlayer"/>
       </template>
     </Dialog>
 
-    <Dialog v-model:visible="deleteProductsDialog" :style="{width: '450px'}" header="Confirm" :modal="true">
+    <Dialog v-model:visible="deletePlayersDialog" :style="{width: '450px'}" header="Confirm" :modal="true">
       <div class="confirmation-content">
-        <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem" />
-        <span v-if="product">Are you sure you want to delete the selected products?</span>
+        <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem"/>
+        <span v-if="player">Are you sure you want to delete the selected players?</span>
       </div>
       <template #footer>
-        <Button label="No" icon="pi pi-times" text @click="deleteProductsDialog = false"/>
-        <Button label="Yes" icon="pi pi-check" text @click="deleteSelectedProducts" />
+        <Button label="No" icon="pi pi-times" text @click="deletePlayersDialog = false"/>
+        <Button label="Yes" icon="pi pi-check" text @click="deleteSelectedPlayers"/>
       </template>
     </Dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { FilterMatchMode } from 'primevue/api';
-import { useToast } from 'primevue/usetoast';
-import {ProductService} from "@/service/ProuctService";
-import player from "@/components/player/Player.vue";
+import {ref, onMounted} from 'vue';
+import {FilterMatchMode} from 'primevue/api';
+import {useToast} from 'primevue/usetoast';
+import {PlayerService} from "@/api/PlayerService";
 
 onMounted(() => {
-  ProductService.getProducts().then((data) => (products.value = data));
+  PlayerService.getPlayer().then((data) => (players.value = data));
 });
 
 const toast = useToast();
 const dt = ref();
-const products = ref();
-const productDialog = ref(false);
-const deleteProductDialog = ref(false);
-const deleteProductsDialog = ref(false);
-const product = ref({});
-const selectedPlayer = ref();
+const players = ref();
+const playerDialog = ref(false);
+const deletePlayerDialog = ref(false);
+const deletePlayersDialog = ref(false);
+const player = ref({
+  id: null,
+  name: '',
+  address: '',
+  playerRole: ''
+});
+const selectedPlayers = ref();
 const filters = ref({
   'global': {value: null, matchMode: FilterMatchMode.CONTAINS},
 });
 const submitted = ref(false);
-const statuses = ref([
-  {label: 'INSTOCK', value: 'instock'},
-  {label: 'LOWSTOCK', value: 'lowstock'},
-  {label: 'OUTOFSTOCK', value: 'outofstock'}
-]);
 
-const formatCurrency = (value) => {
-  if(value)
-    return value.toLocaleString('en-US', {style: 'currency', currency: 'USD'});
-  return;
-};
+
 const openNew = () => {
-  product.value = {};
+  player.value = {
+    id: null,
+    name: '',
+    address: '',
+    playerRole: ''
+  };
   submitted.value = false;
-  productDialog.value = true;
+  playerDialog.value = true;
 };
 const hideDialog = () => {
-  productDialog.value = false;
+  playerDialog.value = false;
   submitted.value = false;
 };
-const saveProduct = () => {
+const savePlayer = () => {
+  console.log(player.value)
+  PlayerService.savePlayer(player.value);
   submitted.value = true;
 
-  if (product.value.name.trim()) {
-    if (product.value.id) {
-      product.value.inventoryStatus = product.value.inventoryStatus.value ? product.value.inventoryStatus.value : product.value.inventoryStatus;
-      products.value[findIndexById(product.value.id)] = product.value;
-      toast.add({severity:'success', summary: 'Successful', detail: 'Product Updated', life: 3000});
-    }
-    else {
-      product.value.id = createId();
-      product.value.code = createId();
-      product.value.image = 'product-placeholder.svg';
-      product.value.inventoryStatus = product.value.inventoryStatus ? product.value.inventoryStatus.value : 'INSTOCK';
-      products.value.push(product.value);
-      toast.add({severity:'success', summary: 'Successful', detail: 'Product Created', life: 3000});
-    }
+  playerDialog.value = false;
+  player.value = {
+    id: null,
+    name: '',
+    address: '',
+    playerRole: ''
+  };
 
-    productDialog.value = false;
-    product.value = {};
-  }
 };
-const editProduct = (prod) => {
-  product.value = {...prod};
-  productDialog.value = true;
+const editPlayer = (prod) => {
+  playerDialog.value = true;
 };
-const confirmDeleteProduct = (prod) => {
-  product.value = prod;
-  deleteProductDialog.value = true;
+const confirmDeletePlayer = (prod) => {
+  deletePlayerDialog.value = true;
 };
-const deleteProduct = () => {
-  products.value = products.value.filter(val => val.id !== product.value.id);
-  deleteProductDialog.value = false;
-  product.value = {};
-  toast.add({severity:'success', summary: 'Successful', detail: 'Product Deleted', life: 3000});
+const deletePlayer = () => {
+  deletePlayerDialog.value = false;
+  player.value = {
+    id: null,
+    name: '',
+    address: '',
+    playerRole: ''
+  };
+  toast.add({severity: 'success', summary: 'Successful', detail: 'Player Deleted', life: 3000});
 };
-const findIndexById = (id) => {
-  let index = -1;
-  for (let i = 0; i < products.value.length; i++) {
-    if (products.value[i].id === id) {
-      index = i;
-      break;
-    }
-  }
 
-  return index;
-};
-const createId = () => {
-  let id = '';
-  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for ( var i = 0; i < 5; i++ ) {
-    id += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return id;
-}
+
 const exportCSV = () => {
   dt.value.exportCSV();
 };
 const confirmDeleteSelected = () => {
-  deleteProductsDialog.value = true;
+  deletePlayersDialog.value = true;
 };
-const deleteSelectedProducts = () => {
-  products.value = products.value.filter(val => !selectedPlayer.value.includes(val));
-  deleteProductsDialog.value = false;
-  selectedPlayer.value = null;
-  toast.add({severity:'success', summary: 'Successful', detail: 'Products Deleted', life: 3000});
+const deleteSelectedPlayers = () => {
+  deletePlayersDialog.value = false;
+  selectedPlayers.value = null;
+  toast.add({severity: 'success', summary: 'Successful', detail: 'Products Deleted', life: 3000});
 };
 
-const getStatusLabel = (status) => {
-  switch (status) {
-    case 'INSTOCK':
-      return 'success';
-
-    case 'LOWSTOCK':
-      return 'warning';
-
-    case 'OUTOFSTOCK':
-      return 'danger';
-
-    default:
-      return null;
-  }
-};
 
 </script>
